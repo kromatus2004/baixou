@@ -98,6 +98,15 @@
   .steps-mini b { color: var(--ink); }
   .upload { cursor: pointer; padding: .6em 1.2em; font-size: .92rem; }
 
+  /* ---------- navegador ---------- */
+  .panel.wide { max-width: 760px; }
+  .url-box.big { margin-bottom: 16px; }
+  .sites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .site-tile { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 700; text-align: left; }
+  .site-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .site-tile .ini { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font: 800 1rem var(--font-display); flex-shrink: 0; }
+  .site-tile small { display: block; font-weight: 500; color: var(--muted); font-size: .75rem; }
+
   /* ---------- aviso flutuante ---------- */
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--ink); color: var(--bg); padding: .75em 1.2em; border-radius: 12px; font-weight: 600; font-size: .92rem; max-width: min(520px, calc(100vw - 32px)); transition: .25s; z-index: 50; box-shadow: var(--shadow); }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -142,6 +151,7 @@
   <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.3 2.4 2.4 4.6-5"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M16.5 6.5l2.5 2.5M14 9l2 2"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.6 3.5 5.4 3.5 8.5s-1.1 5.9-3.5 8.5c-2.4-2.6-3.5-5.4-3.5-8.5s1.1-5.9 3.5-8.5z"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m7 7 10 10M17 7 7 17"/></symbol>
@@ -158,6 +168,7 @@
     <button class="nav-btn" data-view="active" aria-current="page"><svg><use href="#i-down"/></svg>Baixando<span class="n" data-count="active"></span></button>
     <button class="nav-btn" data-view="done"><svg><use href="#i-check"/></svg>Concluídos<span class="n" data-count="done"></span></button>
     <div class="nav-sep"></div>
+    <button class="nav-btn" data-view="browser"><svg><use href="#i-globe"/></svg>Navegador</button>
     <button class="nav-btn" data-view="login"><svg><use href="#i-key"/></svg>Login<span class="auth-dot" data-auth-dot></span></button>
     <button class="nav-btn" id="openFolder"><svg><use href="#i-folder"/></svg>Abrir pasta</button>
     <div class="side-foot">Salvando em<b id="folderPath" class="selectable">Downloads\Baixou</b></div>
@@ -210,10 +221,26 @@
 <nav class="tabbar">
   <button class="nav-btn" data-view="active" aria-current="page"><svg><use href="#i-down"/></svg>Baixando<span class="n" data-count="active"></span></button>
   <button class="nav-btn" data-view="done"><svg><use href="#i-check"/></svg>Concluídos<span class="n" data-count="done"></span></button>
+  <button class="nav-btn" data-view="browser"><svg><use href="#i-globe"/></svg>Navegador</button>
   <button class="nav-btn" data-view="login"><svg><use href="#i-key"/></svg>Login</button>
 </nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<template id="browserTpl">
+  <div class="view-head"><h1>Navegador</h1></div>
+  <div class="panel wide">
+    <p class="hint">Entre nas suas contas por aqui e baixe com um clique no botão <b>⬇ Baixar este vídeo</b>, que aparece no canto de cada página. Não precisa de extensão nem de cookies.txt: o login fica guardado só no Baixou, separado do seu navegador.</p>
+    <form class="url-box big" id="browseForm">
+      <input id="browseUrl" type="text" inputmode="url" autocomplete="off" placeholder="Digite um endereço (ex.: instagram.com)" aria-label="Endereço">
+      <button type="submit">Abrir</button>
+    </form>
+    <div class="sites-grid" id="sitesGrid"></div>
+    <p class="hint small">O formato e a qualidade são os mesmos de "Baixar como", lá em cima.</p>
+    <div class="cookie-box" id="browserUnavailable" hidden><b>O navegador interno só funciona no programa Baixou.</b> Abra o Baixou pelo atalho do Menu Iniciar ou da Área de Trabalho.</div>
+    <p class="hint small"><button class="linkish" type="button" id="browserLogout">Sair de todas as contas do navegador interno</button></p>
+  </div>
+</template>
 
 <template id="loginTpl">
   <div class="view-head"><h1>Login</h1></div>
@@ -288,6 +315,9 @@ function syncPreset() {
   $("#pQuality").disabled = audio;
   $("#pQuality").style.opacity = audio ? .45 : 1;
   store.set("baixou.preset", JSON.stringify({ format: $("#pFormat").value, quality: $("#pQuality").value, playlist: $("#pPlaylist").checked, subs: $("#pSubs").checked }));
+  // O navegador interno usa o mesmo formato: avisa o servidor.
+  const [mode, format] = $("#pFormat").value.split(":");
+  api("/api/preset", { preset: { mode, format, quality: $("#pQuality").value, playlist: $("#pPlaylist").checked, subs: $("#pSubs").checked } }).catch(() => {});
 }
 ["#pFormat", "#pQuality", "#pPlaylist", "#pSubs"].forEach((s) => $(s).addEventListener("change", syncPreset));
 
@@ -326,6 +356,7 @@ function show(view) {
 function statusLine(j) {
   const kind = j.options.mode === "audio" ? j.options.format.toUpperCase() : (j.options.quality === "best" ? "Melhor" : j.options.quality + "p") + " · " + j.options.format.toUpperCase();
   const parts = [];
+  if (j.options.source === "browser") parts.push("🌐 Navegador");
   if (j.site) parts.push(esc(j.site));
   parts.push(kind);
   if (j.count && j.options.playlist) parts.push(`vídeo ${j.index || "?"} de ${j.count}`);
@@ -373,6 +404,10 @@ function render() {
   $$('[data-count="done"]').forEach((e) => (e.textContent = done.length || ""));
 
   const v = $("#view");
+  if (state.view === "browser") {
+    if (!$("#sitesGrid", v)) { v.innerHTML = ""; v.append($("#browserTpl").content.cloneNode(true)); bindBrowser(); }
+    return;
+  }
   if (state.view === "login") {
     if (!$("#authOptions", v)) { v.innerHTML = ""; v.append($("#loginTpl").content.cloneNode(true)); bindLogin(); renderLogin(); }
     return;
@@ -424,12 +459,39 @@ $("#view").addEventListener("click", async (e) => {
   poll();
 });
 
+// ---------- navegador interno ----------
+const SITES = [
+  ["YouTube", "youtube.com", "#E1306C", "https://www.youtube.com"],
+  ["Instagram", "instagram.com", "#C13584", "https://www.instagram.com"],
+  ["TikTok", "tiktok.com", "#111111", "https://www.tiktok.com"],
+  ["Facebook", "facebook.com", "#1877F2", "https://www.facebook.com"],
+  ["X", "x.com", "#333333", "https://x.com"],
+  ["Vimeo", "vimeo.com", "#1AB7EA", "https://vimeo.com"],
+  ["Twitch", "twitch.tv", "#9146FF", "https://www.twitch.tv"],
+  ["SoundCloud", "soundcloud.com", "#FF7700", "https://soundcloud.com"],
+];
+async function openBrowser(url) {
+  try { await api("/api/browser/open", { url }); toast("Abrindo o navegador…"); }
+  catch (e) { toast(e.message, "err"); }
+}
+function bindBrowser() {
+  $("#browserUnavailable").hidden = state.browserAvailable;
+  $("#sitesGrid").innerHTML = SITES.map(([name, host, color, url]) =>
+    `<button class="site-tile" type="button" data-url="${url}"><span class="ini" style="background:${color}">${name[0]}</span><span>${name}<small>${host}</small></span></button>`).join("");
+  $("#sitesGrid").addEventListener("click", (e) => { const t = e.target.closest("[data-url]"); if (t) openBrowser(t.dataset.url); });
+  $("#browseForm").addEventListener("submit", (e) => { e.preventDefault(); const u = $("#browseUrl").value.trim(); if (u) openBrowser(u); });
+  $("#browserLogout").addEventListener("click", async () => {
+    try { await api("/api/browser/logout", {}); toast("Você saiu de todas as contas do navegador interno."); }
+    catch (err) { toast(err.message, "err"); }
+  });
+}
+
 // ---------- login ----------
 const CHROMIUM = ["chrome", "edge", "brave", "opera", "vivaldi"];
 function authLabel(a) { return a === "file" ? "cookies.txt" : state.browsers.find((b) => b.id === a)?.label || "Login"; }
 
 async function loadSettings() {
-  try { const s = await api("/api/settings"); state.browsers = s.browsers; state.hasCookieFile = s.has_cookie_file; } catch { /* fora do ar */ }
+  try { const s = await api("/api/settings"); state.browsers = s.browsers; state.hasCookieFile = s.has_cookie_file; state.browserAvailable = s.browser_available; } catch { /* fora do ar */ }
   const saved = store.get("baixou.auth") || "none";
   state.auth = saved === "none" || saved === "file" || state.browsers.some((b) => b.id === saved) ? saved : "none";
   updateAuthDot();

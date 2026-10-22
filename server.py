@@ -12,6 +12,8 @@ import threading
 import time
 import uuid
 import webbrowser
+from email.utils import parsedate_to_datetime
+from urllib.parse import urlparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -36,7 +38,7 @@ MIME = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/ja
         ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon"}
 
 # O YouTube exige um motor de JavaScript; o Node já instalado no PC resolve.
-BASE_OPTS = {"quiet": True, "no_warnings": True, "js_runtimes": {"node": {}}}
+BASE_OPTS = {"quiet": True, "no_warnings": True, "noprogress": True, "js_runtimes": {"node": {}}}
 if (BIN_DIR / "node.exe").exists():
     BASE_OPTS["js_runtimes"] = {"node": {"path": str(BIN_DIR / "node.exe")}}
 if (BIN_DIR / "ffmpeg.exe").exists():
@@ -62,9 +64,11 @@ def installed_browsers():
     return [{"id": k, "label": label} for k, (label, path) in BROWSERS.items() if path.exists()]
 
 
-def apply_auth(opts, auth):
-    """auth = 'none' | 'file' | id de navegador."""
-    if auth == "file" and COOKIE_FILE.exists():
+def apply_auth(opts, auth, cookiefile=None):
+    """auth = 'none' | 'file' | 'browser' (navegador interno) | id de navegador."""
+    if cookiefile and Path(cookiefile).exists():
+        opts["cookiefile"] = cookiefile
+    elif auth == "file" and COOKIE_FILE.exists():
         opts["cookiefile"] = str(COOKIE_FILE)
     elif auth in BROWSERS:
         opts["cookiesfrombrowser"] = (auth,)
@@ -164,7 +168,7 @@ def build_options(job):
         opts.update({"writesubtitles": True, "writeautomaticsub": True,
                      "subtitleslangs": ["pt.*", "en.*"], "subtitlesformat": "srt/best"})
         opts.setdefault("postprocessors", []).append({"key": "FFmpegSubtitlesConvertor", "format": "srt"})
-    return apply_auth(opts, o.get("auth", "none"))
+    return apply_auth(opts, o.get("auth", "none"), o.get("cookiefile"))
 
 
 def update_job(job_id, **fields):
@@ -234,6 +238,21 @@ def run_job(job_id):
     except Exception as e:  # noqa: BLE001 — qualquer erro vira mensagem na tela
         msg = friendly_error(str(e).replace("ERROR: ", "").strip(), job["options"].get("auth", "none"))
         update_job(job_id, status="cancelled" if job["cancel"] else "error", error=msg[:400])
+    finally:
+        # O login copiado do navegador interno vale só para este download: apaga.
+        if job["options"].get("cookiefile"):
+            Path(job["options"]["cookiefile"]).unlink(missing_ok=True)
+
+
+def find_active(url, options):
+    """Mesmo link com o mesmo formato já baixando? (evita clique duplo)."""
+    keys = ("mode", "format", "quality", "playlist")
+    with jobs_lock:
+        for j in jobs.values():
+            if j["url"] == url and j["status"] in ("queued", "downloading", "processing") and \
+                    all(j["options"].get(k) == options.get(k) for k in keys):
+                return j
+    return None
 
 
 def start_job(url, options, title=None, thumbnail=None):
@@ -273,7 +292,93 @@ def read_clipboard():
 
 
 def public(job):
-    return {k: v for k, v in job.items() if k not in ("cancel",)}
+    data = {k: v for k, v in job.items() if k not in ("cancel",)}
+    data["options"] = {k: v for k, v in job["options"].items() if k != "cookiefile"}
+    return data
+
+
+# ---------- navegador interno ----------
+# Uma segunda janela do pywebview onde a pessoa entra nas contas dela.
+# O login fica guardado no perfil do Baixou (separado do Chrome) e, na hora de
+# baixar, os cookies da página aberta viram um cookies.txt temporário.
+BROWSER = {"webview": None, "window": None, "preset": {"mode": "video", "format": "mp4", "quality": "best"}}
+TOOLBAR_JS = ROOT / "app" / "browser-toolbar.js"
+
+
+def write_cookie_file(cookies, url):
+    """Converte os cookies do WebView2 para o formato Netscape que o yt-dlp lê."""
+    host = urlparse(url).hostname or ""
+    lines = ["# Netscape HTTP Cookie File"]
+    for c in cookies:
+        for name, m in c.items():
+            domain = m["domain"] or host
+            try:
+                expires = int(parsedate_to_datetime(m["expires"]).timestamp()) if m["expires"] else 0
+            except (TypeError, ValueError, OverflowError):
+                expires = 0
+            lines.append("\t".join([
+                domain, "TRUE" if domain.startswith(".") else "FALSE", m["path"] or "/",
+                "TRUE" if m["secure"] else "FALSE", str(max(expires, 0)), name, m.value]))
+    path = DATA_DIR / "cookies" / "browser" / f"{uuid.uuid4().hex}.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return str(path), len(lines) - 1
+
+
+class BrowserApi:
+    """Funções que o botão "Baixar" (injetado nas páginas) pode chamar."""
+
+    def download(self, url):
+        win = BROWSER["window"]
+        if not win:
+            return {"ok": False, "error": "O navegador foi fechado."}
+        # Segurança: um site só consegue pedir o download da própria página aberta.
+        current = win.get_current_url() or ""
+        if not url or url.split("#")[0] != current.split("#")[0]:
+            url = current
+        if not url.startswith(("http://", "https://")):
+            return {"ok": False, "error": "Abra a página do vídeo primeiro."}
+        try:
+            cookiefile, n = write_cookie_file(win.get_cookies() or [], url)
+        except Exception:  # noqa: BLE001 — sem cookies ainda dá para baixar vídeo público
+            cookiefile, n = None, 0
+        options = {**BROWSER["preset"], "auth": "browser", "cookiefile": cookiefile, "source": "browser"}
+        if find_active(url, options):
+            if cookiefile:
+                Path(cookiefile).unlink(missing_ok=True)
+            return {"ok": False, "error": "Esse vídeo já está baixando. Acompanhe na janela principal."}
+        start_job(url, options)
+        return {"ok": True, "cookies": n}
+
+    def back(self):
+        if BROWSER["window"]:
+            BROWSER["window"].evaluate_js("history.back()")
+
+
+def inject_toolbar():
+    win = BROWSER["window"]
+    if win and TOOLBAR_JS.exists():
+        try:
+            win.evaluate_js(TOOLBAR_JS.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — página ainda carregando
+            pass
+
+
+def open_browser(url):
+    webview = BROWSER["webview"]
+    if webview is None:
+        raise RuntimeError("O navegador interno só funciona no programa Baixou (não no modo navegador).")
+    win = BROWSER["window"]
+    if win:
+        win.load_url(url)
+        win.restore()
+        win.show()
+        return
+    win = webview.create_window("Baixou · Navegador", url, js_api=BrowserApi(), width=1180, height=800,
+                                min_size=(420, 520), text_select=True)
+    BROWSER["window"] = win
+    win.events.loaded += inject_toolbar
+    win.events.closed += lambda: BROWSER.update(window=None)
 
 
 # ---------- HTTP ----------
@@ -312,7 +417,8 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:  # noqa: BLE001
                 return self.send_json({"text": ""})
         if path == "/api/settings":
-            return self.send_json({"browsers": installed_browsers(), "has_cookie_file": COOKIE_FILE.exists()})
+            return self.send_json({"browsers": installed_browsers(), "has_cookie_file": COOKIE_FILE.exists(),
+                                   "browser_available": BROWSER["webview"] is not None})
 
         file = STATIC.get(path.rstrip("/") or "/")
         if file is None:
@@ -373,7 +479,11 @@ class Handler(BaseHTTPRequestHandler):
             url = (data.get("url") or "").strip()
             if not url.startswith(("http://", "https://")):
                 return self.send_json({"error": "Link inválido"}, 400)
-            job = start_job(url, data.get("options") or {}, data.get("title"), data.get("thumbnail"))
+            options = data.get("options") or {}
+            options.pop("cookiefile", None)  # só o navegador interno define isso
+            if find_active(url, options):
+                return self.send_json({"error": "Esse vídeo já está baixando."}, 409)
+            job = start_job(url, options, data.get("title"), data.get("thumbnail"))
             return self.send_json(public(job))
 
         if self.path == "/api/cancel":
@@ -384,6 +494,31 @@ class Handler(BaseHTTPRequestHandler):
             with jobs_lock:
                 for jid in [j["id"] for j in jobs.values() if j["status"] in ("done", "error", "cancelled")]:
                     del jobs[jid]
+            return self.send_json({"ok": True})
+
+        if self.path == "/api/browser/open":
+            url = (data.get("url") or "").strip()
+            if url and not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            if not url.startswith(("http://", "https://")) or " " in url:
+                return self.send_json({"error": "Endereço inválido"}, 400)
+            try:
+                open_browser(url)
+            except Exception as e:  # noqa: BLE001
+                return self.send_json({"error": str(e)}, 409)
+            return self.send_json({"ok": True})
+
+        if self.path == "/api/browser/logout":
+            win = BROWSER["window"]
+            if not win:
+                return self.send_json({"error": "Abra o navegador primeiro."}, 409)
+            win.clear_cookies()
+            win.evaluate_js("location.reload()")
+            return self.send_json({"ok": True})
+
+        if self.path == "/api/preset":
+            p = data.get("preset") or {}
+            BROWSER["preset"] = {k: p[k] for k in ("mode", "format", "quality", "playlist", "subs") if k in p}
             return self.send_json({"ok": True})
 
         if self.path == "/api/remove":
@@ -452,6 +587,7 @@ def main():
     if "--browser" not in sys.argv:
         try:
             import webview
+            BROWSER["webview"] = webview
             webview.create_window("Baixou", url, width=1120, height=740, min_size=(380, 520),
                                   background_color="#14110E")
             webview.start(private_mode=False, storage_path=str(DATA_DIR / "webview"))

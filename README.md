@@ -10,7 +10,8 @@
 - Vídeo em MP4, MKV ou WEBM, do 360p ao 8K
 - Só o áudio em MP3, M4A ou WAV
 - Playlists inteiras, legendas (PT/EN) e vários downloads ao mesmo tempo
-- Vídeos que pedem login, usando o login do navegador ou um arquivo `cookies.txt`
+- Navegador embutido: entre nas suas contas dentro do Baixou e baixe vídeos privados com um clique
+- Também aceita o login do navegador ou um arquivo `cookies.txt`
 - Tudo roda no seu PC: nada passa por servidor de terceiros
 
 ## Para desenvolvedores
