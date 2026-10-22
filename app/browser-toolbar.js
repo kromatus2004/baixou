@@ -38,6 +38,23 @@
     toastTimer = setTimeout(() => (toast.style.display = "none"), 4500);
   }
 
+  // Muitos sites (cursos, portais) tocam o vídeo num player embutido
+  // (Vimeo, YouTube, Panda, Wistia…) carregado depois da página. Juntamos
+  // esses endereços para o Baixou tentar quando a página em si não for suportada.
+  function findPlayers() {
+    const urls = new Set();
+    const add = (u) => {
+      try {
+        const abs = new URL(u, location.href).href;
+        if (/^https?:/i.test(abs) && abs !== location.href) urls.add(abs);
+      } catch (e) { /* endereço inválido */ }
+    };
+    document.querySelectorAll("iframe[src], iframe[data-src]").forEach((f) => add(f.src || f.dataset.src));
+    document.querySelectorAll("video[src], video source[src], audio[src], audio source[src]").forEach((v) => add(v.src));
+    document.querySelectorAll("a[href$='.mp4'], a[href$='.m3u8'], a[href$='.mp3']").forEach((a) => add(a.href));
+    return [...urls].slice(0, 15);
+  }
+
   back.addEventListener("click", () => history.back());
   reload.addEventListener("click", () => location.reload());
   dl.addEventListener("click", async () => {
@@ -46,7 +63,7 @@
     dl.disabled = true;
     dl.textContent = "Enviando…";
     try {
-      const r = await api.download(location.href);
+      const r = await api.download(location.href, findPlayers());
       if (r && r.ok) say("✓ Adicionado ao Baixou! Acompanhe na janela principal.");
       else say((r && r.error) || "Não deu para baixar esta página.", true);
     } catch (e) {

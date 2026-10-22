@@ -68,6 +68,9 @@
   .item .s { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .82rem; color: var(--muted); margin-top: 3px; }
   .item .s .err { color: var(--err); white-space: normal; }
   .item .s .ok { color: var(--ok); font-weight: 700; }
+  .item.failed { border-color: color-mix(in srgb, var(--err) 45%, var(--line)); box-shadow: inset 4px 0 0 var(--err); }
+  .item.failed .thumb { opacity: .55; }
+  .err-pill { display: inline-block; background: var(--err-soft); color: var(--err); font-size: .75rem; padding: 1px 8px; border-radius: 99px; margin-right: 4px; }
   .bar { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 9px; }
   .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
   .bar.indet i { width: 30% !important; animation: indet 1.1s ease-in-out infinite; }
@@ -369,7 +372,7 @@ function statusLine(j) {
     if (j.eta) parts.push("falta " + fmtDur(j.eta));
   } else if (j.status === "done") parts.push('<span class="ok">✓ Pronto</span>' + (j.files.length > 1 ? ` · ${j.files.length} arquivos` : ""));
   else if (j.status === "cancelled") parts.push("Cancelado");
-  else parts.push(`<span class="err">${esc(j.error || "Erro")}</span>`);
+  else parts.push(`<span class="err"><b class="err-pill">⚠ Não baixou</b> ${esc(j.error || "Erro desconhecido")}</span>`);
   return parts.map((p) => `<span>${p}</span>`).join("");
 }
 
@@ -386,7 +389,7 @@ function itemHTML(j) {
   else acts = `
     <button class="icon-btn" data-act="retry" title="Tentar de novo">${icon("retry")}</button>
     <button class="icon-btn" data-act="remove" title="Tirar da lista">${icon("trash")}</button>`;
-  return `<div class="item" data-id="${j.id}">
+  return `<div class="item ${j.status === "error" ? "failed" : ""}" data-id="${j.id}">
     <div class="thumb">${icon(kindIcon)}${j.thumbnail ? `<img src="${esc(j.thumbnail)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">` : ""}<span class="kind">${j.options.mode === "audio" ? "ÁUDIO" : "VÍDEO"}</span></div>
     <div class="body">
       <div class="t selectable" title="${esc(j.title || j.url)}">${esc(j.title || j.url)}</div>

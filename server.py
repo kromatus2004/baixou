@@ -79,6 +79,20 @@ def friendly_error(msg, auth="none"):
     """Troca os erros técnicos mais comuns por uma explicação em português."""
     low = msg.lower()
     name = BROWSERS.get(auth, (auth,))[0]
+    if "drm" in low:
+        return ("Esse vídeo é protegido contra cópia (DRM) e não pode ser baixado. "
+                "Veja se a plataforma oferece download ou modo offline no próprio app.")
+    if "http error 404" in low:
+        return "Essa página não existe ou saiu do ar (erro 404). Confira o link."
+    if "http error 403" in low or "http error 401" in low:
+        return ("O site recusou o acesso (erro 403). Se o vídeo exige conta, baixe pelo 🌐 Navegador "
+                "depois de entrar nela.")
+    if "unsupported url" in low:
+        if auth == "browser":
+            return ("Não achei um vídeo que dê para baixar nesta página. Abra a aula ou o vídeo, "
+                    "dê play, espere começar a tocar e clique em Baixar de novo.")
+        return ("Esse site não é suportado direto pelo link. Abra a página em 🌐 Navegador, "
+                "dê play no vídeo e use o botão ⬇ Baixar este vídeo.")
     if "could not copy chrome cookie database" in low or "permission denied" in low and "cookies" in low:
         return (f"Não consegui ler o login do {name} porque ele está aberto. Feche o {name} por completo "
                 "(inclusive o ícone perto do relógio) e tente de novo, ou use um arquivo cookies.txt.")
@@ -139,10 +153,13 @@ def get_info(url, auth="none"):
     }
 
 
-def build_options(job):
+def build_options(job, referer=None):
     o = job["options"]
     opts = {
         **BASE_OPTS,
+        # Players embutidos costumam exigir saber de qual página vieram.
+        **({"http_headers": {"Referer": referer, "Origin": "{0.scheme}://{0.netloc}".format(urlparse(referer))}}
+           if referer else {}),
         "windowsfilenames": True,
         "noplaylist": not o.get("playlist", False),
         "outtmpl": str(DOWNLOAD_DIR / "%(playlist_title)s" / "%(playlist_index)03d - %(title)s.%(ext)s")
@@ -227,9 +244,25 @@ def on_postprocess(job_id, d):
 def run_job(job_id):
     job = jobs[job_id]
     try:
-        with yt_dlp.YoutubeDL(build_options(job)) as ydl:
-            info = ydl.extract_info(job["url"], download=True)
-            fill_meta(job_id, info)
+        # 1º a própria página; se o site não for suportado, os players achados nela.
+        attempts = [(job["url"], None)] + [(u, job["url"]) for u in job["options"].get("candidates") or []]
+        errors = []
+        for i, (url, referer) in enumerate(attempts):
+            try:
+                if referer:
+                    update_job(job_id, status="queued", item=f"Tentando o player {i} de {len(attempts) - 1}…")
+                with yt_dlp.YoutubeDL(build_options(job, referer)) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    fill_meta(job_id, info)
+                break
+            except DownloadCancelled:
+                raise
+            except Exception as e:  # noqa: BLE001
+                errors.append(str(e))
+                if i == len(attempts) - 1:
+                    # DRM é a explicação mais útil quando aparece; senão, o 1º erro (da página).
+                    drm = next((m for m in errors if "drm" in m.lower()), None)
+                    raise RuntimeError(drm or errors[0]) from e
         # Arquivos intermediários (ex.: .m4a antes de virar .mp3) são apagados pelo yt-dlp.
         final = [f for f in job["files"] if os.path.exists(f)]
         update_job(job_id, status="done", percent=100, files=final, finished_at=time.time())
@@ -328,7 +361,7 @@ def write_cookie_file(cookies, url):
 class BrowserApi:
     """Funções que o botão "Baixar" (injetado nas páginas) pode chamar."""
 
-    def download(self, url):
+    def download(self, url, candidates=None):
         win = BROWSER["window"]
         if not win:
             return {"ok": False, "error": "O navegador foi fechado."}
@@ -342,7 +375,10 @@ class BrowserApi:
             cookiefile, n = write_cookie_file(win.get_cookies() or [], url)
         except Exception:  # noqa: BLE001 — sem cookies ainda dá para baixar vídeo público
             cookiefile, n = None, 0
-        options = {**BROWSER["preset"], "auth": "browser", "cookiefile": cookiefile, "source": "browser"}
+        players = [u for u in (candidates or []) if isinstance(u, str) and u.startswith(("http://", "https://"))
+                   and len(u) < 2000][:15]
+        options = {**BROWSER["preset"], "auth": "browser", "cookiefile": cookiefile, "source": "browser",
+                   "candidates": players}
         if find_active(url, options):
             if cookiefile:
                 Path(cookiefile).unlink(missing_ok=True)
@@ -557,10 +593,17 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
 
+class ExclusiveServer(ThreadingHTTPServer):
+    # No Windows, "reuse address" deixa DOIS programas abrirem a mesma porta.
+    # Desligado, um segundo Baixou percebe que já há um rodando e reaproveita.
+    allow_reuse_address = False
+    daemon_threads = True
+
+
 def start_server():
     """Liga o servidor numa thread. Se já tiver um Baixou aberto, reaproveita."""
     try:
-        server = ThreadingHTTPServer((HOST, PORT), Handler)
+        server = ExclusiveServer((HOST, PORT), Handler)
     except OSError:
         return None  # porta ocupada: outro Baixou já está rodando
     threading.Thread(target=server.serve_forever, daemon=True).start()
