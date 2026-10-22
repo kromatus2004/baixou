@@ -1,0 +1,9 @@
+# Login salvo (nunca publicar!)
+cookies/
+*.cookies.txt
+
+# Build e ferramentas baixadas
+build/
+__pycache__/
+*.pyc
+webview/

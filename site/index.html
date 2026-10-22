@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baixou — colou, baixou</title>
+<meta name="description" content="Baixe vídeos e músicas de mais de mil sites direto no seu computador. Grátis, sem anúncios e sem cadastro.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+  html, body { overflow-x: hidden; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  section { padding: 88px 0; }
+
+  /* topo */
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; }
+  .nav ul { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; font-weight: 600; }
+  .nav ul a { text-decoration: none; color: var(--muted); }
+  .nav ul a:hover { color: var(--ink); }
+  .nav .btn { padding: .6em 1.2em; }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; padding: 56px 0 72px; }
+  .eyebrow { display: inline-block; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: .85rem; padding: .35em .9em; border-radius: 999px; margin-bottom: 20px; }
+  .hero h1 { font-size: clamp(2.6rem, 6.4vw, 4.6rem); font-weight: 800; }
+  .hero h1 .u { background: linear-gradient(transparent 62%, var(--accent-soft) 62%); }
+  .hero p.lead { font-size: 1.18rem; color: var(--muted); margin: 22px 0 32px; max-width: 34ch; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cta .btn { padding: .95em 1.7em; font-size: 1.05rem; }
+  .ticks { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 24px; color: var(--muted); font-size: .92rem; font-weight: 500; }
+  .ticks span::before { content: "✓ "; color: var(--ok); font-weight: 800; }
+
+  /* mockup do app */
+  .mock { position: relative; }
+  .mock::before { content: ""; position: absolute; inset: 8% -6% -8% 10%; background: var(--accent); border-radius: 32px; transform: rotate(4deg); opacity: .9; }
+  .window { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 30px 60px -20px rgba(22,18,14,.35); padding: 18px; }
+  .dots { display: flex; gap: 6px; margin-bottom: 16px; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .m-input { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--accent); border-radius: 14px; padding: 8px 8px 8px 14px; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .m-input span { flex: 1; color: var(--muted); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-input b { background: var(--accent); color: var(--accent-ink); font-size: .85rem; padding: .45em 1em; border-radius: 999px; }
+  .m-item { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: center; margin-top: 14px; padding: 10px; border-radius: 12px; background: var(--surface-2); }
+  .m-thumb { aspect-ratio: 16/9; border-radius: 8px; }
+  .m-item strong { display: block; font-size: .9rem; }
+  .m-item small { color: var(--muted); font-size: .78rem; }
+  .m-bar { height: 5px; border-radius: 9px; background: var(--line); margin-top: 6px; overflow: hidden; }
+  .m-bar i { display: block; height: 100%; background: var(--accent); border-radius: 9px; }
+  .m-done { color: var(--ok); font-weight: 700; }
+
+  /* faixa de sites */
+  .sites { padding: 28px 0; border-block: 1px solid var(--line); }
+  .sites .wrap { display: flex; align-items: center; gap: 14px 32px; flex-wrap: wrap; justify-content: center; }
+  .sites p { margin: 0; color: var(--muted); font-weight: 600; font-size: .92rem; }
+  .sites span { font: 700 1.15rem var(--font-display); color: var(--ink); opacity: .55; }
+
+  /* recursos */
+  .head { max-width: 640px; margin-bottom: 48px; }
+  .head h2 { font-size: clamp(2rem, 4.4vw, 3rem); font-weight: 800; }
+  .head p { color: var(--muted); font-size: 1.1rem; margin: 14px 0 0; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .feat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+  .feat .ic { width: 48px; height: 48px; display: grid; place-items: center; font-size: 1.5rem; background: var(--accent-soft); border-radius: 14px; margin-bottom: 18px; }
+  .feat h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+  .feat p { margin: 0; color: var(--muted); }
+  .feat.big { grid-column: span 2; background: var(--ink); color: var(--bg); border-color: var(--ink); display: flex; flex-direction: column; justify-content: flex-end; min-height: 240px; }
+  .feat.big p { color: color-mix(in srgb, var(--bg) 70%, transparent); max-width: 46ch; }
+  .feat.big .ic { background: var(--accent); }
+  .q-list { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .q-list b { font: 700 .85rem var(--font-body); padding: .3em .8em; border-radius: 99px; border: 1.5px solid color-mix(in srgb, var(--bg) 30%, transparent); }
+  .q-list b:first-child { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  /* passos */
+  .how { background: var(--surface-2); }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; }
+  .step { position: relative; padding: 28px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line); }
+  .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font: 800 1.3rem var(--font-display); margin-bottom: 18px; }
+  .step h3 { font-size: 1.2rem; margin-bottom: 6px; }
+  .step p { margin: 0; color: var(--muted); }
+  .step kbd { font: 600 .85em var(--font-body); background: var(--surface-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 0 .4em; }
+
+  /* faq */
+  .faq { display: grid; grid-template-columns: 1fr 1.6fr; gap: 56px; }
+  details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  details:first-of-type { border-top: 1px solid var(--line); }
+  summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 16px; font: 700 1.12rem var(--font-display); }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 1.5rem; line-height: 1; color: var(--accent); transition: transform .2s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { color: var(--muted); margin: 12px 0 0; }
+  code { font-size: .9em; background: var(--surface-2); padding: .1em .4em; border-radius: 5px; }
+
+  /* cta final */
+  .final { text-align: center; background: var(--accent); color: var(--accent-ink); border-radius: 32px; padding: 72px 24px; margin: 0 0 88px; }
+  .final h2 { font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 800; }
+  .final p { opacity: .85; font-size: 1.1rem; margin: 14px 0 30px; }
+  .final .btn { background: var(--ink); color: var(--bg); padding: 1em 2em; font-size: 1.1rem; }
+  .final .btn:hover { opacity: .9; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: .9rem; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+
+  @media (max-width: 880px) {
+    .hero, .faq { grid-template-columns: 1fr; gap: 40px; }
+    .grid, .steps { grid-template-columns: 1fr; }
+    .feat.big { grid-column: auto; }
+    .nav ul { display: none; }
+    section { padding: 64px 0; }
+    .mock::before { inset: 6% -2% -6% 8%; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="logo" href="./"><img src="assets/logo.svg" alt="" width="32" height="32">Baixou</a>
+  <ul>
+    <li><a href="#recursos">Recursos</a></li>
+    <li><a href="#como">Como funciona</a></li>
+    <li><a href="#duvidas">Dúvidas</a></li>
+  </ul>
+  <a class="btn btn-primary" href="https://github.com/kromatus2004/baixou/releases/latest/download/Baixou-Setup.exe">Baixar grátis</a>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div>
+      <span class="eyebrow">Grátis · sem anúncio · sem cadastro</span>
+      <h1>Colou o link,<br><span class="u">baixou</span> o vídeo.</h1>
+      <p class="lead">Guarde vídeos e músicas de mais de mil sites direto no seu computador, na qualidade que você quiser.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/kromatus2004/baixou/releases/latest/download/Baixou-Setup.exe">⬇ Baixar para Windows</a>
+        <a class="btn btn-ghost" href="#como">Ver como funciona</a>
+      </div>
+      <div class="ticks"><span>Até 8K</span><span>MP3 e MP4</span><span>Playlists inteiras</span></div>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="window">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="m-input"><span>https://www.youtube.com/watch?v=…</span><b>Baixar</b></div>
+        <div class="m-item">
+          <div class="m-thumb" style="background:linear-gradient(135deg,#FF8A5B,#FF3D6E)"></div>
+          <div><strong>Aula completa de violão — iniciantes</strong><small>1080p · MP4 · 3,2 MB/s</small><div class="m-bar"><i style="width:68%"></i></div></div>
+        </div>
+        <div class="m-item">
+          <div class="m-thumb" style="background:linear-gradient(135deg,#5B8CFF,#38D1B5)"></div>
+          <div><strong>Podcast episódio 42</strong><small>MP3 · 192 kbps</small><div class="m-bar"><i style="width:31%"></i></div></div>
+        </div>
+        <div class="m-item">
+          <div class="m-thumb" style="background:linear-gradient(135deg,#FFC94D,#FF7A33)"></div>
+          <div><strong>Viagem ao Nordeste (vlog)</strong><small class="m-done">✓ Pronto · 4K · 812 MB</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sites">
+    <div class="wrap">
+      <p>Funciona com</p>
+      <span>YouTube</span><span>Instagram</span><span>TikTok</span><span>X</span><span>Vimeo</span><span>Facebook</span><span>Twitch</span><span>SoundCloud</span>
+      <p>e mais de mil outros</p>
+    </div>
+  </div>
+
+  <section id="recursos">
+    <div class="wrap">
+      <div class="head">
+        <h2>Tudo o que você precisa. Nada que atrapalhe.</h2>
+        <p>Sem pop-up, sem versão "premium", sem esperar contagem regressiva. Você cola, escolhe e pronto.</p>
+      </div>
+      <div class="grid">
+        <div class="feat big">
+          <div class="q-list"><b>8K</b><b>4K</b><b>2K</b><b>1080p</b><b>720p</b><b>480p</b></div>
+          <h3>Escolha a qualidade, do celular à TV</h3>
+          <p>O Baixou mostra só as resoluções que aquele vídeo realmente tem. É só escolher. Na dúvida, "Melhor disponível" resolve.</p>
+        </div>
+        <div class="feat"><div class="ic">🎵</div><h3>Só o áudio</h3><p>Transforme qualquer vídeo em MP3, M4A ou WAV. Bom para podcasts, aulas e músicas.</p></div>
+        <div class="feat"><div class="ic">📚</div><h3>Playlists de uma vez</h3><p>Cole o link da playlist e baixe todos os vídeos já numerados, numa pasta só.</p></div>
+        <div class="feat"><div class="ic">⚡</div><h3>Vários ao mesmo tempo</h3><p>Coloque quantos downloads quiser na fila e acompanhe a velocidade e o tempo que falta de cada um.</p></div>
+        <div class="feat"><div class="ic">💬</div><h3>Legendas junto</h3><p>Baixe as legendas em português ou inglês num arquivo SRT ao lado do vídeo.</p></div>
+        <div class="feat"><div class="ic">🔒</div><h3>Tudo no seu PC</h3><p>Nada passa por servidor de ninguém. Os links que você cola e os arquivos ficam só com você.</p></div>
+        <div class="feat"><div class="ic">🔴</div><h3>Transmissões ao vivo</h3><p>Grave uma live enquanto ela acontece e assista depois, sem internet.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="como" class="how">
+    <div class="wrap">
+      <div class="head">
+        <h2>Três passos. Sério.</h2>
+        <p>Se você sabe copiar e colar, já sabe usar o Baixou.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>Copie o link</h3><p>Abra o vídeo no site e copie o endereço da barra do navegador ou do botão "Compartilhar".</p></div>
+        <div class="step"><h3>Cole no Baixou</h3><p>Aperte <kbd>Ctrl</kbd> + <kbd>V</kbd> no campo. Na hora aparecem o título, a miniatura e as qualidades.</p></div>
+        <div class="step"><h3>Escolha e baixe</h3><p>Vídeo ou áudio, qualidade e formato. Clique em "Baixar agora" e o arquivo vai para <code>Downloads\Baixou</code>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="duvidas">
+    <div class="wrap faq">
+      <div class="head" style="margin:0">
+        <h2>Dúvidas frequentes</h2>
+        <p>Não achou a sua? O Baixou é código aberto: dá para olhar tudo o que ele faz.</p>
+      </div>
+      <div>
+        <details open><summary>É grátis mesmo?</summary><p>Sim. Não tem plano pago, limite de downloads nem marca d'água. Ele usa o yt-dlp, uma ferramenta gratuita e de código aberto.</p></details>
+        <details><summary>Como instalo?</summary><p>Baixe o <code>Baixou-Setup.exe</code> (cerca de 90 MB), abra e clique em Avançar até concluir. Não precisa de senha de administrador nem de instalar mais nada: tudo o que o Baixou usa já vem junto. Funciona no Windows 10 e 11 (64 bits).</p></details>
+        <details><summary>O Windows mostrou um aviso azul. É seguro?</summary><p>Esse aviso (SmartScreen) aparece para programas novos que ainda não têm assinatura digital paga. Clique em <b>Mais informações</b> e depois em <b>Executar assim mesmo</b>. O código do Baixou é aberto e pode ser conferido no GitHub.</p></details>
+        <details><summary>Quais sites funcionam?</summary><p>Mais de mil: YouTube, Instagram, TikTok, X, Facebook, Vimeo, Twitch, SoundCloud e muitos outros. Se um site parar de funcionar, atualizar o yt-dlp costuma resolver.</p></details>
+        <details><summary>Dá para baixar vídeo privado ou que pede login?</summary><p>Dá. Clique em <b>🔑 Login</b> no app e escolha o seu navegador, ou envie um arquivo <code>cookies.txt</code> exportado com a extensão <b>Get cookies.txt LOCALLY</b>. O Baixou usa a sua sessão só para baixar, e o login nunca sai do seu computador. No Windows, o Chrome, o Edge e o Brave costumam bloquear a leitura direta, então ali o cookies.txt é o caminho mais garantido.</p></details>
+        <details><summary>Onde ficam os arquivos?</summary><p>Na pasta <code>Downloads\Baixou</code>. O botão "Abrir pasta" leva você direto até ela. Playlists ganham uma subpasta com o nome da lista.</p></details>
+        <details><summary>Como passo para o celular?</summary><p>Mande pelo cabo USB, pelo Google Drive/OneDrive ou pelo WhatsApp Web. Os arquivos MP4 e MP3 abrem em qualquer celular.</p></details>
+        <details><summary>Posso baixar qualquer vídeo?</summary><p>Tecnicamente quase tudo, mas use com responsabilidade: baixe só o que você tem direito de guardar, como conteúdo próprio, com licença livre ou autorizado pelo autor.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="final">
+      <h2>Bora baixar?</h2>
+      <p>Seu próximo vídeo está a um Ctrl+V de distância.</p>
+      <a class="btn" href="https://github.com/kromatus2004/baixou/releases/latest/download/Baixou-Setup.exe">⬇ Baixar para Windows →</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="./" style="font-size:1.1rem"><img src="assets/logo.svg" alt="" width="26" height="26">Baixou</a>
+    <span>Feito com yt-dlp e ffmpeg. Use com responsabilidade.</span>
+  </div>
+</footer>
+
+</body>
+</html>
